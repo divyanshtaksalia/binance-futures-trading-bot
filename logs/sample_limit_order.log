@@ -1,0 +1,2 @@
+2026-05-18T10:17:42+0530 INFO trading_bot.bot.client API request POST /fapi/v1/order params={"price": "50000", "quantity": "0.001", "recvWindow": 5000, "side": "BUY", "symbol": "BTCUSDT", "timeInForce": "GTC", "timestamp": 1779080262456, "type": "LIMIT"}
+2026-05-18T10:17:43+0530 INFO trading_bot.bot.client API response status=200 body={"orderId":1234567891,"symbol":"BTCUSDT","status":"NEW","clientOrderId":"test-limit-order","price":"50000","avgPrice":"0.00","origQty":"0.001","executedQty":"0","side":"BUY","type":"LIMIT","timeInForce":"GTC"}

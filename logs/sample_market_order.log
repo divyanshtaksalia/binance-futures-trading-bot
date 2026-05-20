@@ -1,0 +1,3 @@
+2026-05-18T10:15:03+0530 INFO trading_bot.bot.client API request POST /fapi/v1/order params={"quantity": "0.001", "recvWindow": 5000, "side": "BUY", "symbol": "BTCUSDT", "timestamp": 1779080103123, "type": "MARKET"}
+2026-05-18T10:15:04+0530 INFO trading_bot.bot.client API response status=200 body={"orderId":1234567890,"symbol":"BTCUSDT","status":"NEW","clientOrderId":"test-client-order","price":"0.00","avgPrice":"0.00","origQty":"0.001","executedQty":"0.001","side":"BUY","type":"MARKET"}
+
