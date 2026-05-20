@@ -53,6 +53,72 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _prompt_interactive_order_params(order_type: str) -> tuple[str, str, str, str | None, str | None, str]:
+    """Prompts the user for order parameters and returns them as a tuple."""
+    symbol = ""
+    while not symbol:
+        symbol = input("Enter Trading Symbol (e.g. BTCUSDT) [BTCUSDT]: ").strip().upper()
+        if not symbol:
+            symbol = "BTCUSDT"
+
+    side = ""
+    while side not in ("BUY", "SELL"):
+        side = input("Enter Side (BUY/SELL): ").strip().upper()
+        if side not in ("BUY", "SELL"):
+            print("Error: Side must be BUY or SELL.")
+
+    quantity = ""
+    while not quantity:
+        quantity = input("Enter Quantity (e.g. 0.001): ").strip()
+        if not quantity:
+            print("Error: Quantity is required.")
+
+    price = None
+    if order_type == "LIMIT":
+        while not price:
+            price = input("Enter Limit Price: ").strip()
+            if not price:
+                print("Error: Price is required for LIMIT orders.")
+
+    stop_price = None
+    if order_type == "STOP_MARKET":
+        while not stop_price:
+            stop_price = input("Enter Stop Trigger Price: ").strip()
+            if not stop_price:
+                print("Error: Stop price is required for STOP_MARKET orders.")
+
+    time_in_force = "GTC"
+    if order_type == "LIMIT":
+        tif_input = input("Enter Time In Force (GTC, IOC, FOK, GTX) [GTC]: ").strip().upper()
+        if tif_input in ("GTC", "IOC", "FOK", "GTX"):
+            time_in_force = tif_input
+            
+    return symbol, side, quantity, price, stop_price, time_in_force
+
+
+def _handle_interactive_ping(api_key: str, api_secret: str, recv_window: int, dry_run: bool) -> None:
+    """Performs the API connectivity test for the interactive menu."""
+    print("\n--- Testing API Connectivity ---")
+    client = BinanceFuturesClient(
+        api_key=api_key if not dry_run else "mock_key",
+        api_secret=api_secret if not dry_run else "mock_secret",
+        recv_window=recv_window,
+        dry_run=dry_run,
+    )
+    try:
+        print("Testing public connectivity...")
+        client.public_ping()
+        server_time = client.get_server_time()
+        local_time = int(time.time() * 1000)
+        diff = abs(server_time - local_time)
+        print(f"Server time check: offset is {diff}ms")
+        print("Testing signed authentication...")
+        client.ping()
+        print("\nSuccess: API connectivity test passed.")
+    except Exception as exc:
+        print(f"\nFailure: API connectivity test failed: {exc}", file=sys.stderr)
+
+
 def run_interactive_mode(logger, api_key: str, api_secret: str, recv_window: int, is_dry_run_init: bool) -> int:
     dry_run = is_dry_run_init
     
@@ -90,69 +156,14 @@ def run_interactive_mode(logger, api_key: str, api_secret: str, recv_window: int
             continue
             
         elif choice == "1":
-            print("\n--- Testing API Connectivity ---")
-            client = BinanceFuturesClient(
-                api_key=api_key if not dry_run else "mock_key",
-                api_secret=api_secret if not dry_run else "mock_secret",
-                recv_window=recv_window,
-                dry_run=dry_run,
-            )
-            try:
-                print("Testing public connectivity...")
-                client.public_ping()
-                server_time = client.get_server_time()
-                local_time = int(time.time() * 1000)
-                diff = abs(server_time - local_time)
-                print(f"Server time check: offset is {diff}ms")
-                print("Testing signed authentication...")
-                client.ping()
-                print("\nSuccess: API connectivity test passed.")
-            except Exception as exc:
-                print(f"\nFailure: API connectivity test failed: {exc}", file=sys.stderr)
+            _handle_interactive_ping(api_key, api_secret, recv_window, dry_run)
             continue
             
         elif choice in ("2", "3", "4"):
             order_type = "MARKET" if choice == "2" else ("LIMIT" if choice == "3" else "STOP_MARKET")
             print(f"\n--- Place {order_type} Order ---")
             
-            # Prompts with input validation
-            symbol = ""
-            while not symbol:
-                symbol = input("Enter Trading Symbol (e.g. BTCUSDT) [BTCUSDT]: ").strip().upper()
-                if not symbol:
-                    symbol = "BTCUSDT"
-            
-            side = ""
-            while side not in ("BUY", "SELL"):
-                side = input("Enter Side (BUY/SELL): ").strip().upper()
-                if side not in ("BUY", "SELL"):
-                    print("Error: Side must be BUY or SELL.")
-            
-            quantity = ""
-            while not quantity:
-                quantity = input("Enter Quantity (e.g. 0.001): ").strip()
-                if not quantity:
-                    print("Error: Quantity is required.")
-            
-            price = None
-            if order_type == "LIMIT":
-                while not price:
-                    price = input("Enter Limit Price: ").strip()
-                    if not price:
-                        print("Error: Price is required for LIMIT orders.")
-            
-            stop_price = None
-            if order_type == "STOP_MARKET":
-                while not stop_price:
-                    stop_price = input("Enter Stop Trigger Price: ").strip()
-                    if not stop_price:
-                        print("Error: Stop price is required for STOP_MARKET orders.")
-            
-            time_in_force = "GTC"
-            if order_type == "LIMIT":
-                tif_input = input("Enter Time In Force (GTC, IOC, FOK, GTX) [GTC]: ").strip().upper()
-                if tif_input in ("GTC", "IOC", "FOK", "GTX"):
-                    time_in_force = tif_input
+            symbol, side, quantity, price, stop_price, time_in_force = _prompt_interactive_order_params(order_type)
 
             # Confirm placement
             print("\nOrder Summary:")
@@ -343,4 +354,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

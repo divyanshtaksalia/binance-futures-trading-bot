@@ -30,7 +30,7 @@ class BinanceFuturesClient:
     sync_time: bool = True
 
     def __post_init__(self) -> None:
-        self.base_url = self.base_url.strip()
+        self.base_url = self.base_url.strip().rstrip("/")
         self._session = requests.Session()
         self._session.headers.update(
             {
@@ -48,14 +48,14 @@ class BinanceFuturesClient:
         if self.dry_run:
             self._logger.info("[DRY-RUN] Intercepted public_ping request.")
             return
-        url = f"{self.base_url.rstrip('/')}/fapi/v1/ping"
+        url = f"{self.base_url}/fapi/v1/ping"
         resp = self._session.get(url, timeout=self.timeout)
         resp.raise_for_status()
 
     def get_server_time(self) -> int:
         if self.dry_run:
             return int(time.time() * 1000)
-        url = f"{self.base_url.rstrip('/')}/fapi/v1/time"
+        url = f"{self.base_url}/fapi/v1/time"
         resp = self._session.get(url, timeout=self.timeout)
         resp.raise_for_status()
         return resp.json()["serverTime"]
@@ -92,7 +92,7 @@ class BinanceFuturesClient:
             hashlib.sha256,
         ).hexdigest()
         signed_params = {**request_params, "signature": signature}
-        url = f"{self.base_url.rstrip('/')}{path}"
+        url = f"{self.base_url}{path}"
 
         self._logger.info(
             "API request %s %s params=%s",
@@ -127,6 +127,11 @@ class BinanceFuturesClient:
             response.status_code,
             self._truncate(response.text),
         )
+
+        # Monitor API Weight Usage
+        used_weight = response.headers.get("X-MBX-USED-WEIGHT-1M")
+        if used_weight and int(used_weight) > 1200:  # Threshold for warning
+            self._logger.warning("Approaching API rate limit. Current weight: %s", used_weight)
 
         try:
             payload = response.json()
